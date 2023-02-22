@@ -57,9 +57,13 @@ def calculate_index(hdf_file_object_dict):
         b = get_band_data_matrix(hdf_object, B)
         swir = get_band_data_matrix(hdf_object, SWIR)
 
+        # source: Development of a two-band enhanced vegetation index without a blue band
         ndvi = (n - r) / (n + r)
+        # source: Development of a two-band enhanced vegetation index without a blue band
         evi = 2.5 * (n - r) / (n + 6 * r - 7.5 * b + 1)
+        # source: Development of a two-band enhanced vegetation index without a blue band
         evi2 = 2.5 * (n - r) / (n + 2.4 * r + 1)
+        # source: Mapping paddy rice agriculture in southern China using multi-temporal MODIS images
         lswi = (n - swir) / (n + swir)
 
         save_as_tiff(ndvi, "NDVI", hdf_file_name)
