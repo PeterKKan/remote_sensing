@@ -4,7 +4,7 @@ from osgeo import gdal
 from osgeo import osr
 import os
 
-HDF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1"  # path of hdf file directory
+HDF_DIR_PATH = "D:\\BaiduNetdiskDownload\\MOD09A1"  # path of hdf file directory
 OUTPUT_PATH = ""  # path of the output directory
 R = "sur_refl_b01"  # band name and its corresponding SDS name
 NIR = "sur_refl_b02"
@@ -58,13 +58,13 @@ def calculate_index(hdf_file_object_dict):
         swir = get_band_data_matrix(hdf_object, SWIR)
 
         # source: Development of a two-band enhanced vegetation index without a blue band
-        ndvi = (n - r) / (n + r)
+        ndvi = reasonable_divide((n - r), (n + r))
         # source: Development of a two-band enhanced vegetation index without a blue band
-        evi = 2.5 * (n - r) / (n + 6 * r - 7.5 * b + 1)
+        evi = 2.5 * reasonable_divide((n - r), (n + 6 * r - 7.5 * b + 1))
         # source: Development of a two-band enhanced vegetation index without a blue band
-        evi2 = 2.5 * (n - r) / (n + 2.4 * r + 1)
+        evi2 = 2.5 * reasonable_divide((n - r), (n + 2.4 * r + 1))
         # source: Mapping paddy rice agriculture in southern China using multi-temporal MODIS images
-        lswi = (n - swir) / (n + swir)
+        lswi = reasonable_divide((n - swir), (n + swir))
 
         save_as_tiff(ndvi, "NDVI", hdf_file_name)
         save_as_tiff(evi, "EVI", hdf_file_name)
@@ -92,6 +92,22 @@ def get_band_data_matrix(hdf_object, band):
     return np.matrix(band_data)
 
 
+def reasonable_divide(divisor, dividend):
+    """
+    a division that can avoid errors like divide by zero.
+
+    :param divisor:
+      type: numpy matrix
+
+    :param dividend:
+      type: numpy matrix
+
+    :return:
+      division result.
+      type: numpy matrix
+    """
+    return np.divide(divisor, dividend, out=np.zeros_like(divisor, dtype=np.float64), where=dividend != 0)
+
 def save_as_tiff(matrix, index_type, hdf_file_name):
     """
     save the calculated matrix as a tiff file.
@@ -118,7 +134,7 @@ def save_as_tiff(matrix, index_type, hdf_file_name):
         output_path = HDF_DIR_PATH + "\\" + index_type
     if not os.path.exists(output_path):
         os.mkdir(output_path)
-    output_file_name = output_path + "\\" + hdf_file_name[0, -13] + index_type + ".tiff"
+    output_file_name = output_path + "\\" + hdf_file_name[0: -13] + index_type + ".tiff"
     created_temp = driver.Create(output_file_name, x_pixels, y_pixels, 1, gdal.GDT_Float32)
     created_temp.GetRasterBand(1).WriteArray(matrix)
 
