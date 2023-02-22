@@ -4,7 +4,7 @@ from osgeo import gdal
 from osgeo import osr
 import os
 
-HDF_DIR_PATH = "D:\\BaiduNetdiskDownload\\MOD09A1"  # path of hdf file directory
+HDF_DIR_PATH = ""  # path of hdf file directory
 OUTPUT_PATH = ""  # path of the output directory
 R = "sur_refl_b01"  # band name and its corresponding SDS name
 NIR = "sur_refl_b02"
