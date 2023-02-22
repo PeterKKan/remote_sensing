@@ -118,7 +118,7 @@ def save_as_tiff(matrix, index_type, hdf_file_name):
         output_path = HDF_DIR_PATH + "\\" + index_type
     if not os.path.exists(output_path):
         os.mkdir(output_path)
-    output_file_name = output_path + "\\" + hdf_file_name + index_type + ".tiff"
+    output_file_name = output_path + "\\" + hdf_file_name[0, -13] + index_type + ".tiff"
     created_temp = driver.Create(output_file_name, x_pixels, y_pixels, 1, gdal.GDT_Float32)
     created_temp.GetRasterBand(1).WriteArray(matrix)
 
