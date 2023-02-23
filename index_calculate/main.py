@@ -141,5 +141,28 @@ def save_as_tiff(matrix, index_type, hdf_file_name):
     created_temp.GetRasterBand(1).WriteArray(matrix)
 
 
+def get_SDS_info(hdf_object, flag=0):
+    """
+    get the number and name of SDS.
+
+    :param hdf_object:
+      the python hdf object.
+
+    :param flag:
+      type: int
+      when it is set to 0, print out SDS_info.
+
+    :return SDS_info:
+      a list:
+        the first element is the number of SDS.
+        the second element is a list of all SDS name(string).
+    """
+
+    sds_info = [hdf_object.info()[0], list(hdf_object.datasets().keys())]
+    if flag == 0:
+        print(sds_info)
+    return sds_info
+
+
 if __name__ == '__main__':
     main()
