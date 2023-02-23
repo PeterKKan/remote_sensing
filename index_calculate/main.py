@@ -33,7 +33,8 @@ def get_hdf_files():
     hdf_file_name_list = os.listdir(HDF_DIR_PATH)
     hdf_file_object_dict = {}
     for file_name in hdf_file_name_list:
-        hdf_file_object_dict[file_name[:-4]] = SD(HDF_DIR_PATH + "\\" + file_name, SDC.READ)
+        if file_name[-4:] == ".hdf":
+            hdf_file_object_dict[file_name[:-4]] = SD(HDF_DIR_PATH + "\\" + file_name, SDC.READ)
     return hdf_file_object_dict
 
 
@@ -107,6 +108,7 @@ def reasonable_divide(divisor, dividend):
       type: numpy matrix
     """
     return np.divide(divisor, dividend, out=np.zeros_like(divisor, dtype=np.float64), where=dividend != 0)
+
 
 def save_as_tiff(matrix, index_type, hdf_file_name):
     """
