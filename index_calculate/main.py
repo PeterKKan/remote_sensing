@@ -4,15 +4,18 @@ from osgeo import gdal
 from osgeo import osr
 import os
 
-HDF_DIR_PATH = ""  # path of hdf file directory
+HDF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1"  # path of hdf file directory
 OUTPUT_PATH = ""  # path of the output directory
 R = "sur_refl_b01"  # band name and its corresponding SDS name
 NIR = "sur_refl_b02"
 B = "sur_refl_b03"
 SWIR = "sur_refl_b06"
+QC = "sur_refl_qc_500m"  # 500m Reflectance Band Quality
 
 
 def main():
+    # print(get_band_data_matrix(list(get_hdf_files().values())[0], QC))
+    # print(get_quality_control_mask(list(get_hdf_files().values())[0]))
     calculate_index(get_hdf_files())
 
 
@@ -57,15 +60,16 @@ def calculate_index(hdf_file_object_dict):
         n = get_band_data_matrix(hdf_object, NIR)
         b = get_band_data_matrix(hdf_object, B)
         swir = get_band_data_matrix(hdf_object, SWIR)
+        qc = get_quality_control_mask(hdf_object)
 
         # source: Development of a two-band enhanced vegetation index without a blue band
-        ndvi = reasonable_divide((n - r), (n + r))
+        ndvi = np.multiply(reasonable_divide((n - r), (n + r)), qc)
         # source: Development of a two-band enhanced vegetation index without a blue band
-        evi = 2.5 * reasonable_divide((n - r), (n + 6 * r - 7.5 * b + 1))
+        evi = np.multiply(2.5 * reasonable_divide((n - r), (n + 6 * r - 7.5 * b + 1)), qc)
         # source: Development of a two-band enhanced vegetation index without a blue band
-        evi2 = 2.5 * reasonable_divide((n - r), (n + 2.4 * r + 1))
+        evi2 = np.multiply(2.5 * reasonable_divide((n - r), (n + 2.4 * r + 1)), qc)
         # source: Mapping paddy rice agriculture in southern China using multi-temporal MODIS images
-        lswi = reasonable_divide((n - swir), (n + swir))
+        lswi = np.multiply(reasonable_divide((n - swir), (n + swir)), qc)
 
         save_as_tiff(ndvi, "NDVI", hdf_file_name)
         save_as_tiff(evi, "EVI", hdf_file_name)
@@ -83,7 +87,7 @@ def get_band_data_matrix(hdf_object, band):
     :param band:
       which band's data need to convert.
       options:
-         R(red)/NIR/B(blue)/SWIR
+         R(red)/NIR/B(blue)/SWIR/QC
 
     :return:
       a numpy matrix of data of a band.
@@ -108,6 +112,26 @@ def reasonable_divide(divisor, dividend):
       type: numpy matrix
     """
     return np.divide(divisor, dividend, out=np.zeros_like(divisor, dtype=np.float64), where=dividend != 0)
+
+
+def get_quality_control_mask(hdf_object):
+    """
+    get data of band quality matrix,
+    and convert it into mask matrix.
+
+    :param hdf_object:
+      the python hdf object.
+
+    :return quality_control_mask:
+      quality control mask.
+      type: numpy matrix.
+    """
+
+    band_quality_matrix = get_band_data_matrix(hdf_object, QC).tolist()
+    quality_control_mask = []
+    for row in band_quality_matrix:
+        quality_control_mask.append([int(bin(num)[-2:] in ['00', '01']) for num in row])
+    return np.matrix(quality_control_mask)
 
 
 def save_as_tiff(matrix, index_type, hdf_file_name):
