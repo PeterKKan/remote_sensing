@@ -14,9 +14,8 @@ QC = "sur_refl_qc_500m"  # 500m Reflectance Band Quality
 
 
 def main():
-    # print(get_band_data_matrix(list(get_hdf_files().values())[0], QC))
-    # print(get_quality_control_mask(list(get_hdf_files().values())[0]))
     calculate_index(get_hdf_files())
+    return
 
 
 def get_hdf_files():
@@ -41,7 +40,7 @@ def get_hdf_files():
     return hdf_file_object_dict
 
 
-def calculate_index(hdf_file_object_dict):
+def calculate_index(hdf_file_object_dict, scale_factor=0.0001, offset=0):
     """
     calculate NDVI, EVI, EVI2, LSWI of each python hdf object and
     save the result to a specified directory.
@@ -51,25 +50,33 @@ def calculate_index(hdf_file_object_dict):
         keys: hdf file name without ".hdf"
         values: corresponding python hdf object
 
+    :param scale_factor:
+      scale factor of the science dataset.
+      type: float
+
+    :param offset:
+      offset of the science dataset.
+      type: float
+
     :return:
       none.
     """
 
     for hdf_file_name, hdf_object in hdf_file_object_dict.items():
-        r = get_band_data_matrix(hdf_object, R)
-        n = get_band_data_matrix(hdf_object, NIR)
-        b = get_band_data_matrix(hdf_object, B)
-        swir = get_band_data_matrix(hdf_object, SWIR)
+        r = scale_factor * get_band_data_matrix(hdf_object, R) + offset
+        n = scale_factor * get_band_data_matrix(hdf_object, NIR) + offset
+        b = scale_factor * get_band_data_matrix(hdf_object, B) + offset
+        swir = scale_factor * get_band_data_matrix(hdf_object, SWIR) + offset
         qc = get_quality_control_mask(hdf_object)
 
         # source: Development of a two-band enhanced vegetation index without a blue band
-        ndvi = np.multiply(reasonable_divide((n - r), (n + r)), qc)
+        ndvi = np.where(qc == 1, reasonable_divide((n - r), (n + r)), np.nan)
         # source: Development of a two-band enhanced vegetation index without a blue band
-        evi = np.multiply(2.5 * reasonable_divide((n - r), (n + 6 * r - 7.5 * b + 1)), qc)
+        evi = np.where(qc == 1, 2.5 * reasonable_divide((n - r), (n + 6 * r - 7.5 * b + 1)), np.nan)
         # source: Development of a two-band enhanced vegetation index without a blue band
-        evi2 = np.multiply(2.5 * reasonable_divide((n - r), (n + 2.4 * r + 1)), qc)
+        evi2 = np.where(qc == 1, 2.5 * reasonable_divide((n - r), (n + 2.4 * r + 1)), np.nan)
         # source: Mapping paddy rice agriculture in southern China using multi-temporal MODIS images
-        lswi = np.multiply(reasonable_divide((n - swir), (n + swir)), qc)
+        lswi = np.where(qc == 1, reasonable_divide((n - swir), (n + swir)), np.nan)
 
         save_as_tiff(ndvi, "NDVI", hdf_file_name)
         save_as_tiff(evi, "EVI", hdf_file_name)
