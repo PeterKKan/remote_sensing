@@ -137,7 +137,7 @@ def get_quality_control_mask(hdf_object):
     band_quality_matrix = get_band_data_matrix(hdf_object, QC).tolist()
     quality_control_mask = []
     for row in band_quality_matrix:
-        quality_control_mask.append([int(bin(num)[-2:] in ['00', '01']) for num in row])
+        quality_control_mask.append([int(bin(num)[-2:] in ['00']) for num in row])
     return np.matrix(quality_control_mask)
 
 
@@ -156,6 +156,8 @@ def save_as_tiff(matrix, index_type, hdf_file_name):
 
     :return:
       none.
+
+    todo: return a bool value and catch the error.
     """
 
     x_pixels = matrix.shape[1]  # number of pixels in x
