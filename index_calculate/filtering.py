@@ -22,6 +22,9 @@ def main():
         save_as_csv(data_smoothed, "W", xls_file_name)
         data_smoothed = smooth_filter_arrays(data_interpolated, "SG")
         save_as_csv(data_smoothed, "SG", xls_file_name)
+
+    plot("evi2.xlsx", 3, "evi2")
+    plot("evi2.xlsx", 4, "evi2")
     return
 
 
@@ -95,10 +98,14 @@ def interpolate_arrays(xls_data_arrays):
     for y in xls_data_arrays[1:]:
         y = y.tolist()
         x = xls_data_arrays[0].tolist()
+        index_to_delete = []
         for index, number in enumerate(y):
             if math.isnan(number):
-                y.pop(index)
-                x.pop(index)
+                index_to_delete.append(index)
+        for counter, index in enumerate(index_to_delete):
+            index = index - counter
+            x.pop(index)
+            y.pop(index)
         f = interpolate.interp1d(np.array(x), np.array(y))
         interpolated_arrays.append(f(x_interpolated))
     return interpolated_arrays
@@ -177,6 +184,43 @@ def save_as_csv(xls_data_arrays, filter_type, xls_file_name):
     with open(output_path + xls_file_name + filter_type + ".csv", 'w', encoding='utf-8', newline='') as fp:
         writer = csv.writer(fp)
         writer.writerows(xls_data_arrays)
+    return
+
+
+def plot(xls_file_name, row, index_type="index"):
+    """
+    draw a graph of the specified xls file name and the specified row number.
+    the graph includes interpolated data in blue color, smoothed data.
+
+    :param xls_file_name:
+      type: string
+
+    :param row:
+     type: int
+
+    :param index_type:
+      type: string
+
+    :return:
+      none.
+    """
+
+    data = [get_xls_data_arrays(pd.read_excel(XLS_DIR_PATH + "\\" + xls_file_name, header=None))[0],
+            get_xls_data_arrays(pd.read_excel(XLS_DIR_PATH + "\\" + xls_file_name, header=None))[row]]
+    data_interpolated = interpolate_arrays(data)
+    z = smooth_filter_arrays(data_interpolated, "W")[1]
+    r = smooth_filter_arrays(data_interpolated, "SG")[1]
+    x_interpolated = data_interpolated[0]
+    y_interpolated = data_interpolated[1]
+    plt.plot(x_interpolated, z, c='r', label='Whittaker smoother')
+    plt.plot(x_interpolated, r, c='g', label='Savitzky-Golay filter')
+    plt.plot(x_interpolated, y_interpolated, label='interpolated data')
+    plt.plot(data[0], data[1], 'o', label='original data')
+    plt.title(xls_file_name + "\nrow: " + str(row))
+    plt.xlabel('DOY')
+    plt.ylabel(index_type)
+    plt.legend()
+    plt.show()
     return
 
 
