@@ -68,10 +68,6 @@ def get_xls_data_arrays(xls_file_object):
     """
 
     xls_data_arrays = xls_file_object.iloc[0:, 1:].values.tolist()  # iloc[row, col]
-    for index, number in enumerate(xls_data_arrays[1]):
-        if math.isnan(number):
-            for row in xls_data_arrays:
-                row.pop(index)
     return np.array(xls_data_arrays)
 
 
@@ -94,11 +90,16 @@ def interpolate_arrays(xls_data_arrays):
           apply other interpolation methods.
     """
 
-    x = xls_data_arrays[0]
     x_interpolated = np.arange(1, 362, 1)
     interpolated_arrays = [x_interpolated]
     for y in xls_data_arrays[1:]:
-        f = interpolate.interp1d(x, y)
+        y = y.tolist()
+        x = xls_data_arrays[0].tolist()
+        for index, number in enumerate(y):
+            if math.isnan(number):
+                y.pop(index)
+                x.pop(index)
+        f = interpolate.interp1d(np.array(x), np.array(y))
         interpolated_arrays.append(f(x_interpolated))
     return interpolated_arrays
 
