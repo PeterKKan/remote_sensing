@@ -10,18 +10,18 @@ import csv
 
 XLS_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week5\\20230224\\Data"
 OUTPUT_PATH = ""
-LAMBDA = 10000
+LAMBDA = 5000
 WINDOW_LENGTH = 51
 
 
 def main():
-    for xls_file_name, xls_file_object in get_xls_files().items():
-        data = get_xls_data_arrays(xls_file_object)
-        data_interpolated = interpolate_arrays(data)
-        data_smoothed = smooth_filter_arrays(data_interpolated, "W")
-        save_as_csv(data_smoothed, "W", xls_file_name)
-        data_smoothed = smooth_filter_arrays(data_interpolated, "SG")
-        save_as_csv(data_smoothed, "SG", xls_file_name)
+    # for xls_file_name, xls_file_object in get_xls_files().items():
+    #     data = get_xls_data_arrays(xls_file_object)
+    #     data_interpolated = interpolate_arrays(data)
+    #     data_smoothed = smooth_filter_arrays(data_interpolated, "W")
+    #     save_as_csv(data_smoothed, "W", xls_file_name)
+    #     data_smoothed = smooth_filter_arrays(data_interpolated, "SG")
+    #     save_as_csv(data_smoothed, "SG", xls_file_name)
 
     plot("evi2.xlsx", 3, "evi2")
     plot("evi2.xlsx", 4, "evi2")
@@ -74,11 +74,11 @@ def get_xls_data_arrays(xls_file_object):
     return np.array(xls_data_arrays)
 
 
-def interpolate_arrays(xls_data_arrays):
+def interpolate_arrays(data_arrays):
     """
     linearly interpolate the data.
 
-    :param xls_data_arrays:
+    :param data_arrays:
       type: a list of numpy arrays
       the first element is the date of year(DOY),
       the other elements are the index corresponding to the day of year.
@@ -95,9 +95,9 @@ def interpolate_arrays(xls_data_arrays):
 
     x_interpolated = np.arange(1, 362, 1)
     interpolated_arrays = [x_interpolated]
-    for y in xls_data_arrays[1:]:
+    for y in data_arrays[1:]:
         y = y.tolist()
-        x = xls_data_arrays[0].tolist()
+        x = data_arrays[0].tolist()
         index_to_delete = []
         for index, number in enumerate(y):
             if math.isnan(number):
@@ -111,11 +111,11 @@ def interpolate_arrays(xls_data_arrays):
     return interpolated_arrays
 
 
-def smooth_filter_arrays(xls_data_arrays, filter_type):
+def smooth_filter_arrays(data_arrays, filter_type):
     """
     smooth filter the data.
 
-    :param xls_data_arrays:
+    :param data_arrays:
       type: a list of numpy arrays
       the first element is the date of year(DOY),
       the other elements are the index corresponding to the day of year.
@@ -133,12 +133,12 @@ def smooth_filter_arrays(xls_data_arrays, filter_type):
       the other elements are the index corresponding to the day of year.
     """
 
-    smoothed_arrays = [xls_data_arrays[0]]
+    smoothed_arrays = [data_arrays[0]]
 
     # Whittaker smoother
     # source: Whittaker Smoother by Neal B. Gallagher
     if filter_type == "W":
-        for y in xls_data_arrays[1:]:
+        for y in data_arrays[1:]:
             m = len(y)
             d = np.diff(np.eye(m), 2)
             w = np.diag([int(not math.isnan(i)) for i in y])
@@ -147,17 +147,17 @@ def smooth_filter_arrays(xls_data_arrays, filter_type):
     # Savitzky-Golay filter
     # source: A method for reconstructing NDVI time-series based on envelope detection and the Savitzky-Golay filter
     elif filter_type == "SG":
-        for y in xls_data_arrays[1:]:
+        for y in data_arrays[1:]:
             r = signal.savgol_filter(y, WINDOW_LENGTH, 2)
             smoothed_arrays.append(r)
     return smoothed_arrays
 
 
-def save_as_csv(xls_data_arrays, filter_type, xls_file_name):
+def save_as_csv(data_arrays, filter_type, xls_file_name):
     """
     save data as csv file.
 
-    :param xls_data_arrays:
+    :param data_arrays:
       type: a list of numpy arrays
       the first element is the date of year(DOY),
       the other elements are the index corresponding to the day of year.
@@ -183,7 +183,7 @@ def save_as_csv(xls_data_arrays, filter_type, xls_file_name):
         output_path = XLS_DIR_PATH + "\\"
     with open(output_path + xls_file_name + filter_type + ".csv", 'w', encoding='utf-8', newline='') as fp:
         writer = csv.writer(fp)
-        writer.writerows(xls_data_arrays)
+        writer.writerows(data_arrays)
     return
 
 
@@ -196,7 +196,7 @@ def plot(xls_file_name, row, index_type="index"):
       type: string
 
     :param row:
-     type: int
+      type: int
 
     :param index_type:
       type: string
