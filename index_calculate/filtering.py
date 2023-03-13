@@ -286,7 +286,7 @@ def save_as_csv(data_arrays, filter_type, xls_file_name):
     return
 
 
-def save_as_tiff(data_arrays, filter_type):
+def save_as_tiff(data_arrays, filter_type, x_pixels=2400, y_pixels=2400):
     """
     save data as tiff file.
 
@@ -300,6 +300,14 @@ def save_as_tiff(data_arrays, filter_type):
       the type of smoothing filter to applied to the data.
       options:
         W(Whittaker smoother) / SG(Savitzky-Golay filter)
+
+    :param x_pixels:
+      type: int
+      number of x-axis pixels of the generated tiff file
+
+    :param y_pixels:
+      type: int
+      number of y-axis pixels of the generated tiff file
 
     :return:
       none.
@@ -320,8 +328,8 @@ def save_as_tiff(data_arrays, filter_type):
 
     for row in data_arrays:
         output_file_name = output_path + "\\" + str(row[0]) + ".tiff"
-        created_temp = driver.Create(output_file_name, 2400, 2400, 1, gdal.GDT_Float32)
-        created_temp.GetRasterBand(1).WriteArray(np.array([row[1:][i:i + 2400] for i in range(0, len(row) - 1, 2400)]))
+        created_temp = driver.Create(output_file_name, x_pixels, y_pixels, 1, gdal.GDT_Float32)
+        created_temp.GetRasterBand(1).WriteArray(np.array([row[1:][i:i + x_pixels] for i in range(0, len(row) - 1, x_pixels)]))
         progress_bar.update(1)
     progress_bar.close()
     tqdm.write("done.\n_______________________________________________________")
