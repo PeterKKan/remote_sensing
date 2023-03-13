@@ -16,6 +16,7 @@ TIFF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1\\EVI2cpy"
 OUTPUT_PATH = ""
 LAMBDA = 5000
 WINDOW_LENGTH = 51
+INVALID_VALUE = 20
 
 
 def main():
@@ -181,11 +182,9 @@ def interpolate_arrays(data_arrays):
             x.pop(index)
             y.pop(index)
 
+        # if len(data_arrays[0]) - len(x) > 10:
         if len(x) < 2:
-            if len(x) == 1:
-                interpolated_arrays.append(np.array([y[0]] * len(x_interpolated)))
-            elif len(x) == 0:
-                interpolated_arrays.append(np.array([0] * len(x_interpolated)))
+            interpolated_arrays.append(np.array([INVALID_VALUE] * len(x_interpolated)))
             progress_bar.update(1)
             continue
         if 0 in index_to_delete:
@@ -328,8 +327,10 @@ def save_as_tiff(data_arrays, filter_type, x_pixels=2400, y_pixels=2400):
 
     for row in data_arrays:
         output_file_name = output_path + "\\" + str(row[0]) + ".tiff"
-        created_temp = driver.Create(output_file_name, x_pixels, y_pixels, 1, gdal.GDT_Float32)
-        created_temp.GetRasterBand(1).WriteArray(np.array([row[1:][i:i + x_pixels] for i in range(0, len(row) - 1, x_pixels)]))
+        created_raster = driver.Create(output_file_name, x_pixels, y_pixels, 1, gdal.GDT_Float32)
+        created_raster.SetNoDataValue(INVALID_VALUE)
+        created_raster.GetRasterBand(1).WriteArray(
+            np.array([row[1:][i:i + x_pixels] for i in range(0, len(row) - 1, x_pixels)]))
         progress_bar.update(1)
     progress_bar.close()
     tqdm.write("done.\n_______________________________________________________")
