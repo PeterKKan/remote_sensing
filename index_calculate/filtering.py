@@ -33,7 +33,7 @@ def main():
     # plot("evi2.xlsx", 5, "evi2")
 
     data = get_tiff_data_arrays(get_tiff_files())
-    # plot("T", 3, index_type="EVI2", data=[data[0], data[4]])
+    plot("T", 3, index_type="EVI2", data=[data[0], data[4]])
     data_interpolated = interpolate_arrays(data)
     data_smoothed = smooth_filter_arrays(data_interpolated, "W")
     save_as_tiff(data_smoothed, "W")
