@@ -8,6 +8,8 @@ import os
 import csv
 from PIL import Image
 from osgeo import gdal
+from tqdm import tqdm
+from tqdm import trange
 
 XLS_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week5\\20230224\\Data"
 TIFF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1\\EVI2cpy"
@@ -30,18 +32,9 @@ def main():
     # plot("evi2.xlsx", 5, "evi2")
 
     data = get_tiff_data_arrays(get_tiff_files())
-    print("origin data")
-    print(type(data))
-    print(data.shape)
-    print(data)
-    print("_______________")
     data_interpolated = interpolate_arrays(data)
-    print(type(data_interpolated))
-    print(data_interpolated.shape)
     data_smoothed = smooth_filter_arrays(data_interpolated, "W")
-    print(type(data_smoothed))
-    print(data_smoothed.shape)
-    save_as_tiff(data_interpolated, "W")
+    save_as_tiff(data_smoothed, "W")
     return
 
 
@@ -86,11 +79,20 @@ def get_tiff_files():
     todo: extract the type of index with regular expression
     """
 
-    tiff_file_name_list = os.listdir(TIFF_DIR_PATH)
+    tiff_file_name_list = []
     tiff_file_object_dict = {}
-    for file_name in tiff_file_name_list:
+    for file_name in os.listdir(TIFF_DIR_PATH):
         if file_name[-5:] == ".tiff":
-            tiff_file_object_dict[file_name[13:16]] = Image.open(TIFF_DIR_PATH + "\\" + file_name)
+            tiff_file_name_list.append(file_name)
+    total_progress = len(tiff_file_name_list)
+    tqdm.write("found " + str(total_progress) + " tiff files.")
+    tqdm.write("start converting tiff files to objects.\nsource directory path: " + TIFF_DIR_PATH)
+    progress_bar = tqdm(range(total_progress))
+    for file_name in tiff_file_name_list:
+        tiff_file_object_dict[file_name[13:16]] = Image.open(TIFF_DIR_PATH + "\\" + file_name)
+        progress_bar.update(1)
+    progress_bar.close()
+    tqdm.write("done.\n_______________________________________________________")
     return tiff_file_object_dict
 
 
@@ -129,10 +131,17 @@ def get_tiff_data_arrays(tiff_file_object_dict):
       the other elements are the index corresponding to the day of year.
     """
 
-    tiff_data_arrays = [[num for row in np.array(tiff_file_object) for num in row] for tiff_file_object in
-                        list(tiff_file_object_dict.values())]
+    tqdm.write("start extracting data from tiff files.")
+    tiff_data_arrays = []
+    total_progress = len(tiff_file_object_dict)
+    progress_bar = tqdm(range(total_progress))
+    for tiff_file_object in list(tiff_file_object_dict.values()):
+        tiff_data_arrays.append([num for row in np.array(tiff_file_object) for num in row])
+        progress_bar.update(1)
+    progress_bar.close()
     tiff_data_arrays = np.transpose(np.array(tiff_data_arrays)).tolist()
     tiff_data_arrays.insert(0, list(map(int, list(tiff_file_object_dict.keys()))))
+    tqdm.write("done.\n_______________________________________________________")
     return np.array(tiff_data_arrays, dtype=object)
 
 
@@ -157,6 +166,9 @@ def interpolate_arrays(data_arrays):
 
     x_interpolated = np.arange(data_arrays[0][0], data_arrays[0][len(data_arrays[0]) - 1] + 1, 1)
     interpolated_arrays = [x_interpolated]
+    total_progress = len(data_arrays) - 1
+    progress_bar = tqdm(range(total_progress))
+    tqdm.write("start interpolating data.")
     for y in data_arrays[1:]:
         y = y.tolist()
         x = data_arrays[0].tolist()
@@ -174,6 +186,7 @@ def interpolate_arrays(data_arrays):
                 interpolated_arrays.append(np.array([y[0]] * len(x_interpolated)))
             elif len(x) == 0:
                 interpolated_arrays.append(np.array([0] * len(x_interpolated)))
+            progress_bar.update(1)
             continue
         if 0 in index_to_delete:
             y.insert(0, y[0] + (data_arrays[0][0] - x[0]) * (y[1] - y[0]) / (x[1] - x[0]))
@@ -184,6 +197,9 @@ def interpolate_arrays(data_arrays):
 
         f = interpolate.interp1d(np.array(x), np.array(y))
         interpolated_arrays.append(f(x_interpolated))
+        progress_bar.update(1)
+    progress_bar.close()
+    tqdm.write("done.\n_______________________________________________________")
     return np.array(interpolated_arrays, dtype=object)
 
 
@@ -210,6 +226,9 @@ def smooth_filter_arrays(data_arrays, filter_type):
     """
 
     smoothed_arrays = [data_arrays[0]]
+    total_progress = len(data_arrays) - 1
+    progress_bar = tqdm(range(total_progress))
+    tqdm.write("start filtering data.")
 
     # Whittaker smoother
     # source: Whittaker Smoother by Neal B. Gallagher
@@ -220,12 +239,16 @@ def smooth_filter_arrays(data_arrays, filter_type):
             w = np.diag([int(not math.isnan(i)) for i in y])
             z = np.dot(np.linalg.inv(w + LAMBDA * np.dot(d, np.transpose(d))), (np.dot(w, y)))
             smoothed_arrays.append(z)
+            progress_bar.update(1)
     # Savitzky-Golay filter
     # source: A method for reconstructing NDVI time-series based on envelope detection and the Savitzky-Golay filter
     elif filter_type == "SG":
         for y in data_arrays[1:]:
             r = signal.savgol_filter(y, WINDOW_LENGTH, 2)
             smoothed_arrays.append(r)
+            progress_bar.update(1)
+    progress_bar.close()
+    tqdm.write("done.\n_______________________________________________________")
     return np.array(smoothed_arrays, dtype=object)
 
 
@@ -283,8 +306,9 @@ def save_as_tiff(data_arrays, filter_type):
     """
 
     data_arrays = np.transpose(data_arrays)
-    print("result shape:")
-    print(data_arrays.shape)
+    total_progress = len(data_arrays)
+    progress_bar = tqdm(range(total_progress))
+    tqdm.write("start saving data to tiff file.")
 
     driver = gdal.GetDriverByName('GTiff')
     output_path = ""
@@ -292,12 +316,15 @@ def save_as_tiff(data_arrays, filter_type):
         output_path = TIFF_DIR_PATH + "\\" + filter_type + "filtered"
     if not os.path.exists(output_path):
         os.mkdir(output_path)
+    tqdm.write("output directory path: " + output_path)
 
-    # for doy, data in tiff_file_data_dict.items():
     for row in data_arrays:
         output_file_name = output_path + "\\" + str(row[0]) + ".tiff"
         created_temp = driver.Create(output_file_name, 2400, 2400, 1, gdal.GDT_Float32)
         created_temp.GetRasterBand(1).WriteArray(np.array([row[1:][i:i + 2400] for i in range(0, len(row) - 1, 2400)]))
+        progress_bar.update(1)
+    progress_bar.close()
+    tqdm.write("done.\n_______________________________________________________")
     return
 
 
