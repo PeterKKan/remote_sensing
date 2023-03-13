@@ -33,6 +33,7 @@ def main():
     # plot("evi2.xlsx", 5, "evi2")
 
     data = get_tiff_data_arrays(get_tiff_files())
+    # plot("T", 3, index_type="EVI2", data=[data[0], data[4]])
     data_interpolated = interpolate_arrays(data)
     data_smoothed = smooth_filter_arrays(data_interpolated, "W")
     save_as_tiff(data_smoothed, "W")
@@ -337,13 +338,14 @@ def save_as_tiff(data_arrays, filter_type, x_pixels=2400, y_pixels=2400):
     return
 
 
-def plot(xls_file_name, row, index_type="index"):
+def plot(mode, row, index_type="index", xls_file_name="", data=None):
     """
     draw a graph of the specified xls file name and the specified row number.
     the graph includes interpolated data in blue color, smoothed data.
 
-    :param xls_file_name:
+    :param mode:
       type: string
+      options: X(xls)/T(tiff)
 
     :param row:
       type: int
@@ -351,12 +353,19 @@ def plot(xls_file_name, row, index_type="index"):
     :param index_type:
       type: string
 
+    :param xls_file_name:
+      type: string
+
+    :param data:
+      type: numpy array
+
     :return:
       none.
     """
 
-    data = [get_xls_data_arrays(pd.read_excel(XLS_DIR_PATH + "\\" + xls_file_name, header=None))[0],
-            get_xls_data_arrays(pd.read_excel(XLS_DIR_PATH + "\\" + xls_file_name, header=None))[row]]
+    if (data is None) and mode == "X":
+        data = [get_xls_data_arrays(pd.read_excel(XLS_DIR_PATH + "\\" + xls_file_name, header=None))[0],
+                get_xls_data_arrays(pd.read_excel(XLS_DIR_PATH + "\\" + xls_file_name, header=None))[row]]
     data_interpolated = interpolate_arrays(data)
     z = smooth_filter_arrays(data_interpolated, "W")[1]
     r = smooth_filter_arrays(data_interpolated, "SG")[1]
