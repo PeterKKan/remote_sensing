@@ -33,7 +33,7 @@ def main():
     # plot("evi2.xlsx", 5, "evi2")
 
     data = get_tiff_data_arrays(get_tiff_files())
-    plot("T", 3, index_type="EVI2", data=[data[0], data[4]])
+    # plot("T", 3, index_type="EVI2", data=[data[0], data[4]])
     data_interpolated = interpolate_arrays(data)
     data_smoothed = smooth_filter_arrays(data_interpolated, "W")
     save_as_tiff(data_smoothed, "W")
@@ -115,7 +115,7 @@ def get_xls_data_arrays(xls_file_object):
     """
 
     xls_data_arrays = xls_file_object.iloc[0:, 1:].values.tolist()  # iloc[row, col]
-    return np.array(xls_data_arrays, dtype=object)
+    return np.array(xls_data_arrays)
 
 
 def get_tiff_data_arrays(tiff_file_object_dict):
@@ -144,7 +144,7 @@ def get_tiff_data_arrays(tiff_file_object_dict):
     tiff_data_arrays = np.transpose(np.array(tiff_data_arrays)).tolist()
     tiff_data_arrays.insert(0, list(map(int, list(tiff_file_object_dict.keys()))))
     tqdm.write("done.\n_______________________________________________________")
-    return np.array(tiff_data_arrays, dtype=object)
+    return np.array(tiff_data_arrays)
 
 
 def interpolate_arrays(data_arrays):
@@ -200,7 +200,7 @@ def interpolate_arrays(data_arrays):
         progress_bar.update(1)
     progress_bar.close()
     tqdm.write("done.\n_______________________________________________________")
-    return np.array(interpolated_arrays, dtype=object)
+    return np.array(interpolated_arrays)
 
 
 def smooth_filter_arrays(data_arrays, filter_type):
@@ -249,7 +249,7 @@ def smooth_filter_arrays(data_arrays, filter_type):
             progress_bar.update(1)
     progress_bar.close()
     tqdm.write("done.\n_______________________________________________________")
-    return np.array(smoothed_arrays, dtype=object)
+    return np.array(smoothed_arrays)
 
 
 def save_as_csv(data_arrays, filter_type, xls_file_name):
