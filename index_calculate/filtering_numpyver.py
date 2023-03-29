@@ -20,7 +20,7 @@ def main():
     test_col = 20
     tiff_files = get_tiff_files()
     doy = get_doy(tiff_files)
-    data = get_tiff_data_arrays(tiff_files, start_row=0, start_col=0, row_num=50, col_num=50)
+    data = get_tiff_data_arrays(tiff_files, start_row=0, start_col=0, row_num=60, col_num=50)
     plt.plot(doy, data[0:, test_row, test_col], 'o', label='original data')
     interpolated_data = interpolate_arrays(data, doy)
     plt.plot(range(1, len(interpolated_data) + 1), interpolated_data[0:, test_row, test_col], label='interpolated data')
@@ -280,7 +280,7 @@ def save_as_tiff(data_arrays, filter_type):
 
     for index, array in enumerate(data_arrays):
         output_file_name = output_path + "\\" + str(index + 1) + ".tiff"
-        created_raster = driver.Create(output_file_name, row_num, col_num, 1, gdal.GDT_Float32)
+        created_raster = driver.Create(output_file_name, col_num, row_num, 1, gdal.GDT_Float32)
         # created_raster.SetNoDataValue(INVALID_VALUE)
         created_raster.GetRasterBand(1).SetNoDataValue(INVALID_VALUE)
         created_raster.GetRasterBand(1).WriteArray(array)
