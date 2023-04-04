@@ -7,6 +7,7 @@ import os
 from PIL import Image
 from osgeo import gdal
 from tqdm import tqdm
+from scipy.signal import find_peaks
 
 TIFF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1\\EVI2"
 INVALID_VALUE = 20
@@ -16,19 +17,24 @@ OUTPUT_PATH = ""
 
 
 def main():
-    test_row = 20
-    test_col = 20
+    test_row = 0
+    test_col = 1
     tiff_files = get_tiff_files()
     doy = get_doy(tiff_files)
-    data = get_tiff_data_arrays(tiff_files, start_row=0, start_col=0, row_num=60, col_num=50)
+    data = get_tiff_data_arrays(tiff_files, start_row=100, start_col=100, row_num=20, col_num=20)
     plt.plot(doy, data[0:, test_row, test_col], 'o', label='original data')
     interpolated_data = interpolate_arrays(data, doy)
     plt.plot(range(1, len(interpolated_data) + 1), interpolated_data[0:, test_row, test_col], label='interpolated data')
     filtered_data = smooth_filter_arrays(interpolated_data, "W")
     plt.plot(range(1, len(filtered_data) + 1), filtered_data[0:, test_row, test_col], label='smoothed data')
+    # peaks, _ = find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=90)
+    peaks, peak_heights = find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=90)
+    plt.plot(peaks, filtered_data[0:, test_row, test_col][peaks], "x")
+    mci = calculate_multiple_crop_index(filtered_data)
+    save_as_tiff_2d(mci, "multiple crop index")
     plt.legend()
     plt.show()
-    save_as_tiff(filtered_data, "W")
+    # save_as_tiff(filtered_data, "W")
     return
 
 
@@ -94,8 +100,8 @@ def get_tiff_data_arrays(tiff_file_object_dict, start_row=0, start_col=0, row_nu
     tqdm.write("start extracting data from tiff files.")
     end_row = start_row + row_num
     end_col = start_col + col_num
-    tqdm.write("row: " + str(start_row) + " to " + str(end_row))
-    tqdm.write("column: " + str(start_col) + " to " + str(end_col))
+    tqdm.write("row: " + str(start_row) + " to " + str(end_row - 1))
+    tqdm.write("column: " + str(start_col) + " to " + str(end_col - 1))
     tiff_data_arrays = [np.array(array)[start_row:end_row, start_col:end_col]
                         for array in list(tiff_file_object_dict.values())]
     tiff_data_arrays = np.stack(tiff_data_arrays)
@@ -108,7 +114,7 @@ def interpolate_arrays(data_arrays, doy):
     linearly interpolate the data.
 
     :param data_arrays:
-      type: a list of numpy 3d-arrays
+      type: numpy 3d-array
       array element type: float 32
       shape: (tiff file number, row number, column number)
 
@@ -193,7 +199,7 @@ def smooth_filter_arrays(data_arrays, filter_type):
 
     :param data_arrays:
       data to be filtered.
-      type: a list of numpy 3d-arrays
+      type: numpy 3d-array
       array element type: float 32
       shape: (interpolated number of days, row number, column number)
 
@@ -245,12 +251,45 @@ def smooth_filter_arrays(data_arrays, filter_type):
     return filtered_arrays
 
 
+def calculate_multiple_crop_index(data_arrays, height=0.3, distance=90):
+    """
+    calculate multiple crop index, base on filtered data.
+
+    :param data_arrays:
+      type: numpy 3d-array
+      array element type: float 32
+      shape: (interpolated number of days, row number, column number)
+
+    :param height:
+      required height of peaks.
+
+    :param distance:
+      required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
+
+    :return multiple_crop_index_arrays:
+      type: numpy 2d-array
+      array element type: int
+      shape: (row number, column number)
+    """
+
+    row_num = data_arrays.shape[1]
+    col_num = data_arrays.shape[2]
+    multiple_crop_index_arrays = np.empty((row_num, col_num))
+    for row in range(row_num):
+        for col in range(col_num):
+            data = data_arrays[:, row, col]
+            peaks, peak_heights = find_peaks(data, height=height, distance=distance)
+            multiple_crop_index_arrays[row, col] = len(peaks)
+    print(multiple_crop_index_arrays)
+    return multiple_crop_index_arrays
+
+
 def save_as_tiff(data_arrays, filter_type):
     """
     save data as tiff file.
 
     :param data_arrays:
-      type: a list of numpy 3d-arrays
+      type: numpy 3d-array
       array element type: float 32
       shape: (interpolated number of days, row number, column number)
 
@@ -286,6 +325,44 @@ def save_as_tiff(data_arrays, filter_type):
         created_raster.GetRasterBand(1).WriteArray(array)
         progress_bar.update(1)
     progress_bar.close()
+    tqdm.write("done.\n_______________________________________________________")
+    return
+
+
+def save_as_tiff_2d(data_array, filter_type):
+    """
+    save data as tiff file.
+
+    :param data_array:
+      type: numpy 2d-array
+      array element type: float 32
+      shape: (row number, column number)
+
+    :param filter_type:
+      type: string
+      the type of smoothing filter to applied to the data.
+
+    :return:
+      none.
+    """
+
+    row_num = data_array.shape[0]
+    col_num = data_array.shape[1]
+    tqdm.write("start saving data to tiff file.")
+
+    driver = gdal.GetDriverByName('GTiff')
+    output_path = ""
+    if OUTPUT_PATH == "":
+        output_path = TIFF_DIR_PATH + "\\" + filter_type
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+    tqdm.write("output directory path: " + output_path)
+
+    output_file_name = output_path + "\\" + filter_type + ".tiff"
+    created_raster = driver.Create(output_file_name, col_num, row_num, 1, gdal.GDT_Float32)
+    # created_raster.SetNoDataValue(INVALID_VALUE)
+    created_raster.GetRasterBand(1).SetNoDataValue(INVALID_VALUE)
+    created_raster.GetRasterBand(1).WriteArray(data_array)
     tqdm.write("done.\n_______________________________________________________")
     return
 
