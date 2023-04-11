@@ -7,8 +7,6 @@ import os
 from PIL import Image
 from osgeo import gdal
 from tqdm import tqdm
-from scipy.signal import find_peaks
-
 TIFF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1\\EVI2"
 INVALID_VALUE = 20
 LAMBDA = 5000
@@ -27,10 +25,9 @@ def main():
     plt.plot(range(1, len(interpolated_data) + 1), interpolated_data[0:, test_row, test_col], label='interpolated data')
     filtered_data = smooth_filter_arrays(interpolated_data, "W")
     plt.plot(range(1, len(filtered_data) + 1), filtered_data[0:, test_row, test_col], label='smoothed data')
-    # peaks, _ = find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=90)
-    peaks, peak_heights = find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=90)
+    peaks, peak_heights = signal.find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=60, prominence=0.1)
     plt.plot(peaks, filtered_data[0:, test_row, test_col][peaks], "x")
-    mci = calculate_multiple_crop_index(filtered_data)
+    mci = calculate_multiple_crop_index(filtered_data, height=0.3, distance=60, prominence=0.1)
     save_as_tiff_2d(mci, "multiple crop index")
     plt.legend()
     plt.show()
@@ -251,7 +248,7 @@ def smooth_filter_arrays(data_arrays, filter_type):
     return filtered_arrays
 
 
-def calculate_multiple_crop_index(data_arrays, height=0.3, distance=90):
+def calculate_multiple_crop_index(data_arrays, height=0.3, distance=60, prominence=0.1):
     """
     calculate multiple crop index, base on filtered data.
 
@@ -266,6 +263,9 @@ def calculate_multiple_crop_index(data_arrays, height=0.3, distance=90):
     :param distance:
       required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
 
+    :param prominence:
+      Required prominence of peaks.
+
     :return multiple_crop_index_arrays:
       type: numpy 2d-array
       array element type: int
@@ -278,9 +278,8 @@ def calculate_multiple_crop_index(data_arrays, height=0.3, distance=90):
     for row in range(row_num):
         for col in range(col_num):
             data = data_arrays[:, row, col]
-            peaks, peak_heights = find_peaks(data, height=height, distance=distance)
+            peaks, peak_heights = signal.find_peaks(data, height=height, distance=distance, prominence=prominence)
             multiple_crop_index_arrays[row, col] = len(peaks)
-    print(multiple_crop_index_arrays)
     return multiple_crop_index_arrays
 
 
