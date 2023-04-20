@@ -7,6 +7,8 @@ import os
 from PIL import Image
 from osgeo import gdal
 from tqdm import tqdm
+import pywt
+
 TIFF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1\\EVI2"
 INVALID_VALUE = 20
 LAMBDA = 5000
@@ -16,22 +18,22 @@ OUTPUT_PATH = ""
 
 def main():
     test_row = 0
-    test_col = 1
+    test_col = 0
     tiff_files = get_tiff_files()
     doy = get_doy(tiff_files)
-    data = get_tiff_data_arrays(tiff_files, start_row=100, start_col=100, row_num=20, col_num=20)
+    data = get_tiff_data_arrays(tiff_files, start_row=100, start_col=100, row_num=50, col_num=50)
     plt.plot(doy, data[0:, test_row, test_col], 'o', label='original data')
     interpolated_data = interpolate_arrays(data, doy)
     plt.plot(range(1, len(interpolated_data) + 1), interpolated_data[0:, test_row, test_col], label='interpolated data')
     filtered_data = smooth_filter_arrays(interpolated_data, "W")
     plt.plot(range(1, len(filtered_data) + 1), filtered_data[0:, test_row, test_col], label='smoothed data')
     peaks, peak_heights = signal.find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=60, prominence=0.1)
-    plt.plot(peaks, filtered_data[0:, test_row, test_col][peaks], "x")
-    mci = calculate_multiple_crop_index(filtered_data, height=0.3, distance=60, prominence=0.1)
-    save_as_tiff_2d(mci, "multiple crop index")
+    plt.plot(peaks, filtered_data[0:, test_row, test_col][peaks], "x", label='heading date')
+    ci = calculate_cropping_intensity(filtered_data, height=0.3, distance=60, prominence=0.1)
+    # save_as_tiff_2d(ci, "multiple crop index")
     plt.legend()
     plt.show()
-    # save_as_tiff(filtered_data, "W")
+    save_as_tiff(filtered_data, "W")
     return
 
 
@@ -243,12 +245,20 @@ def smooth_filter_arrays(data_arrays, filter_type):
                 filtered_arrays[:, row, col] = r
                 progress_bar.update(1)
 
+    # elif filter_type == "CWT":
+    #     for row in range(row_num):
+    #         for col in range(col_num):
+    #             y = data_arrays[:, row, col]
+    #             coef, freqs = pywt.cwt(y, np.arange(10, 41), "morl")
+    #             filtered_arrays[:, row, col] = pywt.waverec(coef, "morl")
+    #             progress_bar.update(1)
+
     progress_bar.close()
     tqdm.write("done.\n_______________________________________________________")
     return filtered_arrays
 
 
-def calculate_multiple_crop_index(data_arrays, height=0.3, distance=60, prominence=0.1):
+def calculate_cropping_intensity(data_arrays, height=0.3, distance=60, prominence=0.1):
     """
     calculate multiple crop index, base on filtered data.
 
@@ -274,13 +284,14 @@ def calculate_multiple_crop_index(data_arrays, height=0.3, distance=60, prominen
 
     row_num = data_arrays.shape[1]
     col_num = data_arrays.shape[2]
-    multiple_crop_index_arrays = np.empty((row_num, col_num))
+    cropping_intensity_arrays = np.empty((row_num, col_num))
     for row in range(row_num):
         for col in range(col_num):
             data = data_arrays[:, row, col]
             peaks, peak_heights = signal.find_peaks(data, height=height, distance=distance, prominence=prominence)
-            multiple_crop_index_arrays[row, col] = len(peaks)
-    return multiple_crop_index_arrays
+            cropping_intensity_arrays[row, col] = len(peaks)
+    # print(cropping_intensity_arrays)
+    return cropping_intensity_arrays
 
 
 def save_as_tiff(data_arrays, filter_type):
