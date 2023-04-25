@@ -21,6 +21,11 @@ def main():
 
 
 def mapping_paddy_rice():
+    """
+
+
+
+    """
     test_row = 0
     test_col = 0
 

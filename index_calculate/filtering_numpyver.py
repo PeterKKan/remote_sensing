@@ -155,7 +155,7 @@ def interpolate_arrays(data_arrays, doy):
             # if there are more than 10 nan data in a row,
             # all the data in this row will be set to invalid values
             if len(doy) - len(x) > 10:
-                tqdm.write("filled with invalid value: row: " + str(row) + " col: " + str(col))
+                # tqdm.write("filled with invalid value: row: " + str(row) + " col: " + str(col))
                 interpolated_arrays[:, row, col] = np.array([INVALID_VALUE] * len(x_interpolated))
                 progress_bar.update(1)
                 continue
@@ -323,6 +323,8 @@ def save_as_tiff(data_arrays, filter_type):
     output_path = ""
     if OUTPUT_PATH == "":
         output_path = TIFF_DIR_PATH + "\\" + filter_type + "filtered"
+    else:
+        output_path = OUTPUT_PATH
     if not os.path.exists(output_path):
         os.mkdir(output_path)
     tqdm.write("output directory path: " + output_path)
