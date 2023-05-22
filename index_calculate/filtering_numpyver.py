@@ -7,7 +7,7 @@ import os
 from PIL import Image
 from osgeo import gdal
 from tqdm import tqdm
-from scipy.signal import find_peaks
+import pywt
 
 TIFF_DIR_PATH = "D:\\study\\yanyi\\yaogan\\week2\\MOD09A1\\EVI2"
 INVALID_VALUE = 20
@@ -18,23 +18,22 @@ OUTPUT_PATH = ""
 
 def main():
     test_row = 0
-    test_col = 1
+    test_col = 0
     tiff_files = get_tiff_files()
     doy = get_doy(tiff_files)
-    data = get_tiff_data_arrays(tiff_files, start_row=100, start_col=100, row_num=20, col_num=20)
+    data = get_tiff_data_arrays(tiff_files, start_row=100, start_col=100, row_num=50, col_num=50)
     plt.plot(doy, data[0:, test_row, test_col], 'o', label='original data')
     interpolated_data = interpolate_arrays(data, doy)
     plt.plot(range(1, len(interpolated_data) + 1), interpolated_data[0:, test_row, test_col], label='interpolated data')
     filtered_data = smooth_filter_arrays(interpolated_data, "W")
     plt.plot(range(1, len(filtered_data) + 1), filtered_data[0:, test_row, test_col], label='smoothed data')
-    # peaks, _ = find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=90)
-    peaks, peak_heights = find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=90)
-    plt.plot(peaks, filtered_data[0:, test_row, test_col][peaks], "x")
-    mci = calculate_multiple_crop_index(filtered_data)
-    save_as_tiff_2d(mci, "multiple crop index")
+    peaks, peak_heights = signal.find_peaks(filtered_data[0:, test_row, test_col], height=0.3, distance=60, prominence=0.1)
+    plt.plot(peaks, filtered_data[0:, test_row, test_col][peaks], "x", label='heading date')
+    ci = calculate_cropping_intensity(filtered_data, height=0.3, distance=60, prominence=0.1)
+    # save_as_tiff_2d(ci, "multiple crop index")
     plt.legend()
     plt.show()
-    # save_as_tiff(filtered_data, "W")
+    save_as_tiff(filtered_data, "W")
     return
 
 
@@ -156,7 +155,7 @@ def interpolate_arrays(data_arrays, doy):
             # if there are more than 10 nan data in a row,
             # all the data in this row will be set to invalid values
             if len(doy) - len(x) > 10:
-                tqdm.write("filled with invalid value: row: " + str(row) + " col: " + str(col))
+                # tqdm.write("filled with invalid value: row: " + str(row) + " col: " + str(col))
                 interpolated_arrays[:, row, col] = np.array([INVALID_VALUE] * len(x_interpolated))
                 progress_bar.update(1)
                 continue
@@ -246,12 +245,20 @@ def smooth_filter_arrays(data_arrays, filter_type):
                 filtered_arrays[:, row, col] = r
                 progress_bar.update(1)
 
+    # elif filter_type == "CWT":
+    #     for row in range(row_num):
+    #         for col in range(col_num):
+    #             y = data_arrays[:, row, col]
+    #             coef, freqs = pywt.cwt(y, np.arange(10, 41), "morl")
+    #             filtered_arrays[:, row, col] = pywt.waverec(coef, "morl")
+    #             progress_bar.update(1)
+
     progress_bar.close()
     tqdm.write("done.\n_______________________________________________________")
     return filtered_arrays
 
 
-def calculate_multiple_crop_index(data_arrays, height=0.3, distance=90):
+def calculate_cropping_intensity(data_arrays, height=0.3, distance=60, prominence=0.1):
     """
     calculate multiple crop index, base on filtered data.
 
@@ -266,6 +273,9 @@ def calculate_multiple_crop_index(data_arrays, height=0.3, distance=90):
     :param distance:
       required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
 
+    :param prominence:
+      Required prominence of peaks.
+
     :return multiple_crop_index_arrays:
       type: numpy 2d-array
       array element type: int
@@ -274,14 +284,14 @@ def calculate_multiple_crop_index(data_arrays, height=0.3, distance=90):
 
     row_num = data_arrays.shape[1]
     col_num = data_arrays.shape[2]
-    multiple_crop_index_arrays = np.empty((row_num, col_num))
+    cropping_intensity_arrays = np.empty((row_num, col_num))
     for row in range(row_num):
         for col in range(col_num):
             data = data_arrays[:, row, col]
-            peaks, peak_heights = find_peaks(data, height=height, distance=distance)
-            multiple_crop_index_arrays[row, col] = len(peaks)
-    print(multiple_crop_index_arrays)
-    return multiple_crop_index_arrays
+            peaks, peak_heights = signal.find_peaks(data, height=height, distance=distance, prominence=prominence)
+            cropping_intensity_arrays[row, col] = len(peaks)
+    # print(cropping_intensity_arrays)
+    return cropping_intensity_arrays
 
 
 def save_as_tiff(data_arrays, filter_type):
@@ -313,6 +323,8 @@ def save_as_tiff(data_arrays, filter_type):
     output_path = ""
     if OUTPUT_PATH == "":
         output_path = TIFF_DIR_PATH + "\\" + filter_type + "filtered"
+    else:
+        output_path = OUTPUT_PATH
     if not os.path.exists(output_path):
         os.mkdir(output_path)
     tqdm.write("output directory path: " + output_path)
