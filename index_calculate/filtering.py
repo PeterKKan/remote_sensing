@@ -28,15 +28,16 @@ def main():
     #     data_smoothed = smooth_filter_arrays(data_interpolated, "SG")
     #     save_as_csv(data_smoothed, "SG", xls_file_name)
 
-    # plot("evi2.xlsx", 3, "evi2")
-    # plot("evi2.xlsx", 4, "evi2")
-    # plot("evi2.xlsx", 5, "evi2")
+    for row in range(1, 101):
+        plot("X", row, index_type="evi2", xls_file_name="evi2.xlsx", save=True, show=False)
+    # plot("X", 4, index_type="evi2", xls_file_name="evi2.xlsx")
+    # plot("X", 5, index_type="evi2", xls_file_name="evi2.xlsx")
 
-    data = get_tiff_data_arrays(get_tiff_files())
+    # data = get_tiff_data_arrays(get_tiff_files())
     # plot("T", 3, index_type="EVI2", data=[data[0], data[4]])
-    data_interpolated = interpolate_arrays(data)
-    data_smoothed = smooth_filter_arrays(data_interpolated, "W")
-    save_as_tiff(data_smoothed, "W")
+    # data_interpolated = interpolate_arrays(data)
+    # data_smoothed = smooth_filter_arrays(data_interpolated, "W")
+    # save_as_tiff(data_smoothed, "W")
     return
 
 
@@ -63,6 +64,7 @@ def get_xls_files():
             xls_file_object_dict[file_name[:-4]] = pd.read_excel(XLS_DIR_PATH + "\\" + file_name, header=None)
         elif file_name[-5:] == ".xlsx":
             xls_file_object_dict[file_name[:-5]] = pd.read_excel(XLS_DIR_PATH + "\\" + file_name, header=None)
+    print(xls_file_object_dict)
     return xls_file_object_dict
 
 
@@ -338,7 +340,7 @@ def save_as_tiff(data_arrays, filter_type, x_pixels=2400, y_pixels=2400):
     return
 
 
-def plot(mode, row, index_type="index", xls_file_name="", data=None):
+def plot(mode, row, index_type="", xls_file_name="", data=None, save=False, show=True):
     """
     draw a graph of the specified xls file name and the specified row number.
     the graph includes interpolated data in blue color, smoothed data.
@@ -351,6 +353,7 @@ def plot(mode, row, index_type="index", xls_file_name="", data=None):
       type: int
 
     :param index_type:
+      string like "evi/lswi/ndvi"
       type: string
 
     :param xls_file_name:
@@ -358,6 +361,14 @@ def plot(mode, row, index_type="index", xls_file_name="", data=None):
 
     :param data:
       type: numpy array
+
+    :param save:
+      save or not
+      type: bool
+
+    :param show:
+      show or not
+      type: bool
 
     :return:
       none.
@@ -379,7 +390,13 @@ def plot(mode, row, index_type="index", xls_file_name="", data=None):
     plt.xlabel('DOY')
     plt.ylabel(index_type)
     plt.legend()
-    plt.show()
+    if save:
+        if not os.path.exists(XLS_DIR_PATH + "\\" + index_type + "plot"):
+            os.mkdir(XLS_DIR_PATH + "\\" + index_type + "plot")
+        plt.savefig(XLS_DIR_PATH + "\\" + index_type + "plot" + "\\" + "row" + str(row) + ".png", dpi=300)
+    if show:
+        plt.show()
+    plt.cla()
     return
 
 
