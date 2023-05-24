@@ -140,7 +140,7 @@ def mapping_winter_wheat():
     tqdm.write("start mapping winter wheat.")
     plt.plot(range(1, len(evi2_data) + 1), evi2_data[:, test_row, test_col], label='smoothed EVI2 data', c="royalblue")
 
-    # he nan provence's average latitude and altitude
+    # Henan provence's average latitude and altitude
     latitude = np.zeros((row_num, col_num))
     latitude[:, :] = 33.7
     altitude = np.zeros((row_num, col_num))
@@ -174,11 +174,17 @@ def mapping_winter_wheat():
 
     for row in range(row_num):
         for col in range(col_num):
-            if seeding_date[row, col] < heading_date[row, col] or harvesting_date[row, col] > 361:
+            if harvesting_date[row, col] > 361:
                 progress_bar.update(1)
                 continue
-            evi2_max1[row, col] = evi2_data[heading_date[row, col] - 1: seeding_date[row, col], row, col].max()
-            evi2_min1[row, col] = evi2_data[heading_date[row, col] - 1: seeding_date[row, col], row, col].min()
+            elif seeding_date[row, col] < heading_date[row, col]:
+                evi2_max1[row, col] = evi2_data[heading_date[row, col] - 1: seeding_date[row, col], row, col].max()
+                evi2_min1[row, col] = evi2_data[heading_date[row, col] - 1: seeding_date[row, col], row, col].min()
+            elif seeding_date[row, col] >= heading_date[row, col]:
+                evi2_max1[row, col] = np.concatenate([evi2_data[0: heading_date[row, col], row, col],
+                                                      evi2_data[seeding_date[row, col]: 361, row, col]]).max()
+                evi2_min1[row, col] = np.concatenate([evi2_data[0: heading_date[row, col], row, col],
+                                                      evi2_data[seeding_date[row, col]: 361, row, col]]).min()
             evi2_max2[row, col] = evi2_data[heading_date[row, col] - 1: harvesting_date[row, col], row, col].max()
             evi2_min2[row, col] = evi2_data[heading_date[row, col] - 1: harvesting_date[row, col], row, col].min()
             eve[row, col] = evi2_data[heading_date[row, col], row, col] - evi2_data[seeding_date[row, col], row, col] + evi2_max1[row, col] - evi2_min1[row, col]
